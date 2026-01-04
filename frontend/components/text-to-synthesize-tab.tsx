@@ -11,9 +11,14 @@ import { Switch } from "@/components/ui/switch"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import LinearProgressBar from "./linear-progress-bar"
 
 // Default text for voice cloning - user reads this aloud
 const VOICE_CLONING_TEXT = "Tiếp nữa, chúng ta sẽ điểm qua một số công cụ khác trong Facebook Business Manager rất hữu ích cho quảng cáo trên Facebook và Instagram."
+
+// Time estimation calibration (seconds per word)
+// Calibrated from 3 sample runs: avg ~0.15s/word for high quality
+const TIME_PER_WORD = 0.15
 
 interface VoiceSample {
   id: string
@@ -37,6 +42,9 @@ export default function TextToSynthesizeTab({ text, setText, onGenerate, isGener
   const [emotion, setEmotion] = useState("auto")
   const [quality, setQuality] = useState("high")
   const [speed, setSpeed] = useState([1])
+
+  // Progress bar estimation
+  const [estimatedSeconds, setEstimatedSeconds] = useState(0)
 
   // Voice cloning section state - default OPEN, remember user preference
   // Initialize with consistent default to avoid hydration mismatch
@@ -654,6 +662,11 @@ export default function TextToSynthesizeTab({ text, setText, onGenerate, isGener
   }
 
   const handleGenerate = async () => {
+    // Calculate estimated time based on word count
+    const wordCount = text.trim().split(/\s+/).length
+    const estimated = wordCount * TIME_PER_WORD
+    setEstimatedSeconds(estimated)
+
     setIsGenerating(true)
     // Auto-collapse voice cloning section for better UX
     setIsVoiceCloningOpen(false)
@@ -1106,6 +1119,11 @@ export default function TextToSynthesizeTab({ text, setText, onGenerate, isGener
           "Generate Speech"
         )}
       </Button>
+
+      {/* Progress bar - shown during generation */}
+      {isGenerating && estimatedSeconds > 0 && (
+        <LinearProgressBar estimatedSeconds={estimatedSeconds} />
+      )}
     </div>
   )
 }

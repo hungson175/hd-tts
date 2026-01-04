@@ -1,35 +1,56 @@
 # WHITEBOARD - Current Sprint
 
-## Team Status (Updated: 03:28)
+## Team Status (Updated: 03:36)
 
 | Role | Current Task | Status | Notes |
 |------|--------------|--------|-------|
-| **FS** | UI-007: Persistent Input Text | Assigned | See spec below |
+| **FS** | UI-003: Linear Progress Bar | Assigned | See spec below |
 | **DEV** | - | Idle | Standing by |
-| **PO** | Sprint Planning | Active | Assigned UI-007 to FS |
+| **PO** | Sprint Planning | Active | Assigned UI-003 to FS |
 
 ---
 
-## Current Sprint: UI-007
+## Current Sprint: UI-003
 
-### UI-007: Persistent Input Text
+### UI-003: Linear Progress Bar with Time Estimation
 **Priority:** P1
 **Owner:** FS
 
 #### Description
-The main text input field should remember the user's last input. On first visit, show sample text. On subsequent visits, show the last text the user provided.
+When "Generate Speech" is clicked, show a horizontal progress bar directly below the button. Shows elapsed time and estimated total time based on word count.
 
-#### Acceptance Criteria
-- [ ] First-time users see sample text (default)
-- [ ] Returning users see their last input text
-- [ ] Text persists across page refreshes
-- [ ] Uses localStorage for persistence
+#### Design Specs
+- **Position:** Directly below "Generate Speech" button
+- **Width:** Same as button width
+- **Fill direction:** Bottom to top
+- **Color:** Green
+- **Display:** Shows elapsed/estimated time
 
 #### Implementation Notes
-- Target file: `frontend/components/text-to-synthesize-tab.tsx`
-- Use localStorage key: `vietvoice_last_input_text`
-- On mount: Check localStorage → use saved text OR sample text
-- On text change: Save to localStorage
+1. **Calibration (one-time):** Run 3 sample messages, calculate average time per word
+2. **Runtime:** Count words in user input → estimate total seconds
+3. **Progress bar:** Linear horizontal, fills with green from bottom to top
+4. **Display:** Show elapsed seconds and estimated total
+5. **Cap at ~95-99%** until actually complete (since it's an estimate)
+
+#### Acceptance Criteria
+- [ ] Linear progress bar appears below "Generate Speech" button
+- [ ] Same width as button
+- [ ] Fills green from bottom to top
+- [ ] Shows elapsed seconds
+- [ ] Shows estimated total time (based on word count)
+- [ ] Progress fills smoothly, caps near 100% until done
+- [ ] Time-per-word calibrated from 3 sample runs
+
+---
+
+## Recently Completed
+
+**UI-007: Persistent Input Text** (commit dfa48ea)
+- ✓ localStorage persistence implemented
+- ✓ First-time users see sample text
+- ✓ Returning users see last input
+- ✓ SSR-safe implementation
 
 ---
 

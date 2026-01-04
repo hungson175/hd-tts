@@ -3,14 +3,14 @@
 ## Progress Summary
 
 **Total Items:** 17
-**Completed:** 10 (59%)
-**In Sprint:** 1 (6%)
+**Completed:** 11 (65%)
+**In Sprint:** 0 (0%)
 **Ready:** 5 (29%)
 **New:** 1 (6%)
 
 ### Breakdown by Category
 - **Voice Cloning:** 3/4 done (75%)
-- **UI Features:** 3/7 done (43%)
+- **UI Features:** 4/7 done (57%)
 - **Infrastructure:** 2/2 done (100%)
 - **Technical:** 1/3 done (33%)
 - **Auth/API:** 1/2 done (50%)
@@ -109,22 +109,31 @@ Add download and share icon buttons to the generated audio widget.
 
 ---
 
-## UI-003: Circular Progress Bar with Time Estimation
+## UI-003: Linear Progress Bar with Time Estimation
 **Priority:** P1
 **Status:** Ready
 
 ### Description
-When "Generate Speech" is clicked, show a circular progress bar with elapsed time and estimated total time. Base estimation on word count.
+When "Generate Speech" is clicked, show a horizontal progress bar directly below the button. Shows elapsed time and estimated total time based on word count.
+
+### Design Specs
+- **Position:** Directly below "Generate Speech" button
+- **Width:** Same as button width
+- **Fill direction:** Bottom to top
+- **Color:** Green
+- **Display:** Shows elapsed/estimated time
 
 ### Implementation Notes
 1. **Calibration (one-time):** Run 3 sample messages, calculate average time per word
 2. **Runtime:** Count words in user input → estimate total seconds
-3. **Progress bar:** Circular, fills gradually based on elapsed/estimated time
+3. **Progress bar:** Linear horizontal, fills with green from bottom to top
 4. **Display:** Show elapsed seconds and estimated total
 5. **Cap at ~95-99%** until actually complete (since it's an estimate)
 
 ### Acceptance Criteria
-- [ ] Circular progress bar during generation
+- [ ] Linear progress bar appears below "Generate Speech" button
+- [ ] Same width as button
+- [ ] Fills green from bottom to top
 - [ ] Shows elapsed seconds
 - [ ] Shows estimated total time (based on word count)
 - [ ] Progress fills smoothly, caps near 100% until done
@@ -258,7 +267,7 @@ Install and configure ESLint for frontend.
 
 ## UI-007: Persistent Input Text
 **Priority:** P1
-**Status:** Ready
+**Status:** Done
 
 ### Description
 The main text input field should remember the user's last input. On first visit, show sample text. On subsequent visits, show the last text the user provided.
