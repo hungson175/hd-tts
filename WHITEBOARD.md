@@ -1,12 +1,35 @@
 # WHITEBOARD - Current Sprint
 
-## Team Status (Updated: 03:45)
+## Team Status (Updated: 03:28)
 
 | Role | Current Task | Status | Notes |
 |------|--------------|--------|-------|
-| **FS** | - | Idle | All tasks done, committed |
-| **DEV** | - | Idle | All tasks done, committed |
-| **PO** | - | Idle | Sprint complete |
+| **FS** | UI-007: Persistent Input Text | Assigned | See spec below |
+| **DEV** | - | Idle | Standing by |
+| **PO** | Sprint Planning | Active | Assigned UI-007 to FS |
+
+---
+
+## Current Sprint: UI-007
+
+### UI-007: Persistent Input Text
+**Priority:** P1
+**Owner:** FS
+
+#### Description
+The main text input field should remember the user's last input. On first visit, show sample text. On subsequent visits, show the last text the user provided.
+
+#### Acceptance Criteria
+- [ ] First-time users see sample text (default)
+- [ ] Returning users see their last input text
+- [ ] Text persists across page refreshes
+- [ ] Uses localStorage for persistence
+
+#### Implementation Notes
+- Target file: `frontend/components/text-to-synthesize-tab.tsx`
+- Use localStorage key: `vietvoice_last_input_text`
+- On mount: Check localStorage → use saved text OR sample text
+- On text change: Save to localStorage
 
 ---
 

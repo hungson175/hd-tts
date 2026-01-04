@@ -1,5 +1,22 @@
 # Product Backlog - VietVoice-TTS
 
+## Progress Summary
+
+**Total Items:** 17
+**Completed:** 10 (59%)
+**In Sprint:** 1 (6%)
+**Ready:** 5 (29%)
+**New:** 1 (6%)
+
+### Breakdown by Category
+- **Voice Cloning:** 3/4 done (75%)
+- **UI Features:** 3/7 done (43%)
+- **Infrastructure:** 2/2 done (100%)
+- **Technical:** 1/3 done (33%)
+- **Auth/API:** 1/2 done (50%)
+
+---
+
 ## VC-001: Voice Cloning - Recording Support
 **Priority:** P1
 **Status:** Done
@@ -236,6 +253,21 @@ Add automated tests for core TTS library and backend.
 
 ### Description
 Install and configure ESLint for frontend.
+
+---
+
+## UI-007: Persistent Input Text
+**Priority:** P1
+**Status:** Ready
+
+### Description
+The main text input field should remember the user's last input. On first visit, show sample text. On subsequent visits, show the last text the user provided.
+
+### Acceptance Criteria
+- [ ] First-time users see sample text (default)
+- [ ] Returning users see their last input text
+- [ ] Text persists across page refreshes
+- [ ] Uses localStorage for persistence
 
 ---
 

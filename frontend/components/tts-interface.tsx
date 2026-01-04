@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { AudioLines } from "lucide-react"
 import TextToSynthesizeTab from "./text-to-synthesize-tab"
@@ -12,7 +12,20 @@ export default function TTSInterface() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationTime, setGenerationTime] = useState<number | null>(null)
-  const [text, setText] = useState(DEFAULT_TEXT)
+  const [text, setText] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedText = localStorage.getItem("vietvoice_last_input_text")
+      return savedText !== null ? savedText : DEFAULT_TEXT
+    }
+    return DEFAULT_TEXT
+  })
+
+  // Persist text to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("vietvoice_last_input_text", text)
+    }
+  }, [text])
 
   return (
     <div className="mx-auto max-w-7xl">
