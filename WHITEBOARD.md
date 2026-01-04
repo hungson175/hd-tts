@@ -1,52 +1,28 @@
 # WHITEBOARD - Current Sprint
 
-## Team Status (Updated: 03:36)
+## Team Status (Updated: 03:39)
 
 | Role | Current Task | Status | Notes |
 |------|--------------|--------|-------|
-| **FS** | UI-003: Linear Progress Bar | Assigned | See spec below |
+| **FS** | - | Idle | UI-003 complete (9b76b32) |
 | **DEV** | - | Idle | Standing by |
-| **PO** | Sprint Planning | Active | Assigned UI-003 to FS |
-
----
-
-## Current Sprint: UI-003
-
-### UI-003: Linear Progress Bar with Time Estimation
-**Priority:** P1
-**Owner:** FS
-
-#### Description
-When "Generate Speech" is clicked, show a horizontal progress bar directly below the button. Shows elapsed time and estimated total time based on word count.
-
-#### Design Specs
-- **Position:** Directly below "Generate Speech" button
-- **Width:** Same as button width
-- **Fill direction:** Bottom to top
-- **Color:** Green
-- **Display:** Shows elapsed/estimated time
-
-#### Implementation Notes
-1. **Calibration (one-time):** Run 3 sample messages, calculate average time per word
-2. **Runtime:** Count words in user input → estimate total seconds
-3. **Progress bar:** Linear horizontal, fills with green from bottom to top
-4. **Display:** Show elapsed seconds and estimated total
-5. **Cap at ~95-99%** until actually complete (since it's an estimate)
-
-#### Acceptance Criteria
-- [ ] Linear progress bar appears below "Generate Speech" button
-- [ ] Same width as button
-- [ ] Fills green from bottom to top
-- [ ] Shows elapsed seconds
-- [ ] Shows estimated total time (based on word count)
-- [ ] Progress fills smoothly, caps near 100% until done
-- [ ] Time-per-word calibrated from 3 sample runs
+| **PO** | - | Idle | Sprint complete |
 
 ---
 
 ## Recently Completed
 
+**UI-003: Linear Progress Bar** (commit 9b76b32)
+- ✓ Horizontal bar below Generate button
+- ✓ Green fill from bottom to top
+- ✓ Time estimation (0.15s/word calibrated)
+- ✓ Smooth animation, caps at 95%
+
 **UI-007: Persistent Input Text** (commit dfa48ea)
+- ✓ localStorage persistence implemented
+- ✓ First-time users see sample text
+- ✓ Returning users see last input
+- ✓ SSR-safe implementation
 - ✓ localStorage persistence implemented
 - ✓ First-time users see sample text
 - ✓ Returning users see last input

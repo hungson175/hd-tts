@@ -3,14 +3,14 @@
 ## Progress Summary
 
 **Total Items:** 17
-**Completed:** 11 (65%)
+**Completed:** 12 (71%)
 **In Sprint:** 0 (0%)
-**Ready:** 5 (29%)
+**Ready:** 4 (24%)
 **New:** 1 (6%)
 
 ### Breakdown by Category
 - **Voice Cloning:** 3/4 done (75%)
-- **UI Features:** 4/7 done (57%)
+- **UI Features:** 5/7 done (71%)
 - **Infrastructure:** 2/2 done (100%)
 - **Technical:** 1/3 done (33%)
 - **Auth/API:** 1/2 done (50%)
@@ -111,7 +111,7 @@ Add download and share icon buttons to the generated audio widget.
 
 ## UI-003: Linear Progress Bar with Time Estimation
 **Priority:** P1
-**Status:** Ready
+**Status:** Done
 
 ### Description
 When "Generate Speech" is clicked, show a horizontal progress bar directly below the button. Shows elapsed time and estimated total time based on word count.

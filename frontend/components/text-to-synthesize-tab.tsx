@@ -17,8 +17,10 @@ import LinearProgressBar from "./linear-progress-bar"
 const VOICE_CLONING_TEXT = "Tiếp nữa, chúng ta sẽ điểm qua một số công cụ khác trong Facebook Business Manager rất hữu ích cho quảng cáo trên Facebook và Instagram."
 
 // Time estimation calibration (seconds per word)
-// Calibrated from 3 sample runs: avg ~0.15s/word for high quality
-const TIME_PER_WORD = 0.15
+// Calibrated from 6 actual generation tests (3 samples × 2 runs each)
+// Test results: 272 total words, 30.80s total time
+// Samples: Vietnamese text 43-49 words, high quality mode
+const TIME_PER_WORD = 0.1132
 
 interface VoiceSample {
   id: string
