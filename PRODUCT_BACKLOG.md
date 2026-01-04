@@ -185,7 +185,7 @@ Turn all services (backend gateway, workers, Redis, frontend) into persistent Li
 
 ## DEPLOY-001: Cloudflare Deployment
 **Priority:** P0
-**Status:** In Sprint (DEV)
+**Status:** Done
 
 ### Description
 Deploy publicly via Cloudflare for wife to use. Expose both frontend and API.
