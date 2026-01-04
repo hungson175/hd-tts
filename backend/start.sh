@@ -50,6 +50,28 @@ check_redis() {
     return 1
 }
 
+cleanup_gpu() {
+    # Kill zombie Python workers using GPU memory
+    log_info "Checking for zombie GPU processes..."
+
+    # Get PIDs of Python processes using GPU (exclude system processes)
+    GPU_PIDS=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | tr -d ' ')
+
+    if [ -n "$GPU_PIDS" ]; then
+        for PID in $GPU_PIDS; do
+            # Check if it's a Python process
+            if ps -p $PID -o comm= 2>/dev/null | grep -q python; then
+                log_warn "Killing zombie Python process using GPU (PID: $PID)"
+                kill -9 $PID 2>/dev/null || true
+            fi
+        done
+        sleep 1
+        log_info "GPU cleanup complete"
+    else
+        log_info "No zombie GPU processes found"
+    fi
+}
+
 start_redis() {
     if check_redis; then
         log_info "Redis is already running"
@@ -275,6 +297,7 @@ case "$1" in
             exit 1
         fi
 
+        cleanup_gpu  # Kill zombie Python processes using GPU
         start_redis
         start_gateway
         sleep 2  # Wait for gateway to start

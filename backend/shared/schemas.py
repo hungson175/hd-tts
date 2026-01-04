@@ -24,6 +24,7 @@ class TTSJob(BaseModel):
     quality: str = "high"  # "high" or "fast"
     reference_audio: Optional[str] = None  # base64 encoded
     reference_text: Optional[str] = None
+    trim_audio_to: Optional[float] = None  # trim reference audio to this duration (seconds)
     created_at: float = Field(default_factory=time.time)
     timeout: int = 120
 
@@ -58,6 +59,7 @@ class TTSRequest(BaseModel):
     quality: str = Field("high", pattern="^(high|fast)$")  # "high" (NFE=32) or "fast" (NFE=16)
     reference_audio: Optional[str] = None  # base64 encoded audio for voice cloning
     reference_text: Optional[str] = None  # transcript of reference audio
+    trim_audio_to: Optional[float] = Field(None, ge=1.0, le=60.0)  # trim reference audio to this duration (seconds)
 
 
 class TTSAsyncResponse(BaseModel):

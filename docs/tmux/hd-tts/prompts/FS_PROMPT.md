@@ -23,6 +23,23 @@ Reports to PO for coordination.
 
 ---
 
+## CRITICAL: Frontend Build Rules
+
+**USE WEBPACK, NOT TURBOPACK** - Turbopack causes 500 errors on static chunks.
+
+**After ANY frontend change:**
+```bash
+cd frontend
+rm -rf .next
+pnpm build
+# VERIFY build succeeds before restarting
+pnpm exec next start -p 3341
+```
+
+**NEVER use `--turbo` flag or experimental.turbo in next.config.js**
+
+---
+
 ## Core Responsibilities
 
 1. **Implement features** - Backend + Frontend + Core library

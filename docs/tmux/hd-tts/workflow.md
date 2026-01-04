@@ -107,6 +107,9 @@ Boss: Reviews and provides feedback
 | WHITEBOARD.md | PO | Current sprint status, specs |
 | PRODUCT_BACKLOG.md | PO | All backlog items |
 | Code files | FS/DEV | Implementation |
+| .env | - | Secrets (SUDO_PASS, etc.) - git ignored |
+
+**Note:** If you need sudo password for system operations, read from `.env` file in project root.
 
 ---
 
@@ -145,6 +148,27 @@ A Story is "Done" when:
 
 ---
 
+## GPU Management (CRITICAL)
+
+**ALWAYS check GPU before starting services:**
+```bash
+nvidia-smi
+```
+
+**If GPU memory is high (>50% with no active tasks):**
+```bash
+# Kill zombie Python processes
+pkill -9 -f "python.*worker"
+pkill -9 -f "python.*main.py"
+
+# Verify cleanup
+nvidia-smi
+```
+
+**start.sh now auto-cleans zombies**, but ALWAYS verify manually when debugging OOM errors.
+
+---
+
 ## Common Mistakes
 
 | Mistake | Correct |
@@ -153,3 +177,5 @@ A Story is "Done" when:
 | Not reporting task completion | ALWAYS report via tm-send |
 | Waiting silently | Communicate status immediately |
 | Skipping TDD | Write tests first |
+| **Not checking GPU memory** | **ALWAYS run nvidia-smi before debugging OOM** |
+| **Ignoring zombie processes** | **Check nvidia-smi for stale Python workers** |

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { Loader2, Mic, Square, Trash2, Sparkles, Save, Check } from "lucide-react"
+import { Loader2, Mic, Square, Trash2, Sparkles, Save, Check, Upload, FileAudio, Download } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ChevronDown } from "lucide-react"
@@ -24,13 +24,14 @@ interface VoiceSample {
 }
 
 interface TextToSynthesizeTabProps {
+  text: string
+  setText: (value: string) => void
   onGenerate: (audioUrl: string, time: number) => void
   isGenerating: boolean
   setIsGenerating: (value: boolean) => void
 }
 
-export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGenerating }: TextToSynthesizeTabProps) {
-  const [text, setText] = useState("Tiếp theo, bạn sẽ được làm quen với Facebook Ads Manager, để hiểu rõ cấu trúc và cách thiết lập campaign, ad set và ad. Sau đó, chúng ta sẽ phân tích các định dạng quảng cáo khác nhau và những best practices khi chạy ads cho nghệ sĩ.")
+export default function TextToSynthesizeTab({ text, setText, onGenerate, isGenerating, setIsGenerating }: TextToSynthesizeTabProps) {
   const [gender, setGender] = useState("auto")
   const [accent, setAccent] = useState("auto")
   const [emotion, setEmotion] = useState("auto")
@@ -38,18 +39,25 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
   const [speed, setSpeed] = useState([1])
 
   // Voice cloning section state - default OPEN, remember user preference
-  const [isVoiceCloningOpen, setIsVoiceCloningOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('voiceCloningOpen')
-      return saved !== null ? saved === 'true' : true // Default to OPEN
-    }
-    return true
-  })
+  // Initialize with consistent default to avoid hydration mismatch
+  const [isVoiceCloningOpen, setIsVoiceCloningOpen] = useState(true)
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  // Persist voice cloning open/closed state
+  // Load saved preference after hydration
   useEffect(() => {
-    localStorage.setItem('voiceCloningOpen', String(isVoiceCloningOpen))
-  }, [isVoiceCloningOpen])
+    const saved = localStorage.getItem('voiceCloningOpen')
+    if (saved !== null) {
+      setIsVoiceCloningOpen(saved === 'true')
+    }
+    setIsHydrated(true)
+  }, [])
+
+  // Persist voice cloning open/closed state (only after hydration)
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem('voiceCloningOpen', String(isVoiceCloningOpen))
+    }
+  }, [isVoiceCloningOpen, isHydrated])
 
   // Voice cloning recording state
   const [isRecording, setIsRecording] = useState(false)
@@ -59,6 +67,15 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
 
+  // File upload state
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+  const [uploadedAudioUrl, setUploadedAudioUrl] = useState<string | null>(null)
+  const [uploadedAudioBase64, setUploadedAudioBase64] = useState<string | null>(null)
+  const [uploadedNeedsTrim, setUploadedNeedsTrim] = useState(false)  // If uploaded file > 15s, backend will trim
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const SUPPORTED_FORMATS = ['audio/webm', 'audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/flac']
+
   // Saved voice samples state
   const [savedSamples, setSavedSamples] = useState<VoiceSample[]>([])
   const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null)
@@ -67,11 +84,65 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
   const [isSaving, setIsSaving] = useState(false)
   const [saveName, setSaveName] = useState("")
   const [showSaveInput, setShowSaveInput] = useState(false)
+  const [voiceInitialized, setVoiceInitialized] = useState(false) // Track if we've loaded from localStorage
 
-  // Load saved samples on mount
+  // Load saved samples on mount and restore last selected voice
   useEffect(() => {
-    loadSavedSamples()
+    const initVoiceSamples = async () => {
+      await loadSavedSamples()
+      // Restore last selected voice from localStorage
+      const savedVoiceId = localStorage.getItem('selectedVoiceSampleId')
+      console.log('[VoicePersistence] Checking localStorage, savedVoiceId:', savedVoiceId)
+      if (savedVoiceId) {
+        await restoreSelectedVoice(savedVoiceId)
+      }
+      // Mark as initialized AFTER loading
+      setVoiceInitialized(true)
+      console.log('[VoicePersistence] Initialization complete')
+    }
+    initVoiceSamples()
   }, [])
+
+  // Persist selected voice to localStorage - but ONLY after initial load
+  useEffect(() => {
+    // Skip persistence until we've loaded from localStorage
+    if (!voiceInitialized) {
+      console.log('[VoicePersistence] Skipping persistence - not initialized yet')
+      return
+    }
+
+    console.log('[VoicePersistence] selectedSampleId changed to:', selectedSampleId)
+    if (selectedSampleId) {
+      localStorage.setItem('selectedVoiceSampleId', selectedSampleId)
+      console.log('[VoicePersistence] Saved to localStorage:', selectedSampleId)
+    } else {
+      localStorage.removeItem('selectedVoiceSampleId')
+      console.log('[VoicePersistence] Removed from localStorage')
+    }
+  }, [selectedSampleId, voiceInitialized])
+
+  // Restore selected voice (called after samples are loaded)
+  const restoreSelectedVoice = async (sampleId: string) => {
+    console.log('[VoicePersistence] Restoring voice sample:', sampleId)
+    try {
+      const response = await fetch(`/api/voice-samples/${sampleId}`)
+      console.log('[VoicePersistence] API response status:', response.status)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[VoicePersistence] Restored sample data, has audio:', !!data.audio)
+        setSelectedSampleId(sampleId)
+        setSelectedSampleAudio(data.audio)
+        setSelectedSampleText(data.reference_text)
+      } else {
+        // Sample no longer exists, clear localStorage
+        console.log('[VoicePersistence] Sample not found, clearing localStorage')
+        localStorage.removeItem('selectedVoiceSampleId')
+      }
+    } catch (error) {
+      console.error("[VoicePersistence] Error restoring voice sample:", error)
+      localStorage.removeItem('selectedVoiceSampleId')
+    }
+  }
 
   const loadSavedSamples = async () => {
     try {
@@ -164,12 +235,301 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
     }
   }
 
-  // Determine active voice cloning source
-  const hasActiveCloning = (recordedAudioBase64 || selectedSampleAudio) && useVoiceCloning
-  const activeAudioBase64 = recordedAudioBase64 || selectedSampleAudio
-  const activeReferenceText = recordedAudioBase64 ? VOICE_CLONING_TEXT : selectedSampleText
+  // Determine active voice cloning source (priority: recorded > uploaded > saved)
+  const hasActiveCloning = (recordedAudioBase64 || uploadedAudioBase64 || selectedSampleAudio) && useVoiceCloning
+  const activeAudioBase64 = recordedAudioBase64 || uploadedAudioBase64 || selectedSampleAudio
+  const activeReferenceText = (recordedAudioBase64 || uploadedAudioBase64) ? VOICE_CLONING_TEXT : selectedSampleText
+
+  // Constants for audio limits
+  const MAX_AUDIO_DURATION = 15 // seconds
+  const TARGET_TRIM_DURATION = 14.5 // seconds
+
+  // Trim audio from both ends using Web Audio API
+  // Converts to mono 24kHz WAV (TTS backend requirement)
+  const trimAudioFile = async (file: File, targetDuration: number): Promise<Blob> => {
+    const arrayBuffer = await file.arrayBuffer()
+    console.log(`[Trim] File size: ${arrayBuffer.byteLength} bytes`)
+
+    const audioContext = new AudioContext()
+    let audioBuffer: AudioBuffer
+
+    try {
+      audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0))
+    } catch (decodeError) {
+      console.error("[Trim] Failed to decode audio:", decodeError)
+      await audioContext.close()
+      throw new Error(`Cannot decode audio file: ${decodeError}`)
+    }
+
+    console.log(`[Trim] Decoded: ${audioBuffer.duration}s, ${audioBuffer.sampleRate}Hz, ${audioBuffer.numberOfChannels}ch, ${audioBuffer.length} samples`)
+
+    if (audioBuffer.length === 0 || audioBuffer.duration === 0) {
+      await audioContext.close()
+      throw new Error("Audio file is empty after decoding")
+    }
+
+    const originalDuration = audioBuffer.duration
+    const trimAmount = (originalDuration - targetDuration) / 2
+    const startTime = Math.max(0, trimAmount)
+    const endTime = Math.min(originalDuration, originalDuration - trimAmount)
+
+    const sourceSampleRate = audioBuffer.sampleRate
+    const startSample = Math.floor(startTime * sourceSampleRate)
+    const endSample = Math.floor(endTime * sourceSampleRate)
+    const trimmedLength = endSample - startSample
+
+    console.log(`[Trim] Trimming: start=${startTime.toFixed(2)}s, end=${endTime.toFixed(2)}s, samples=${trimmedLength}`)
+
+    if (trimmedLength <= 0) {
+      await audioContext.close()
+      throw new Error("Invalid trim range - no samples remaining")
+    }
+
+    // Convert to mono by averaging all channels
+    const monoData = new Float32Array(trimmedLength)
+    const numChannels = audioBuffer.numberOfChannels
+    for (let i = 0; i < trimmedLength; i++) {
+      let sum = 0
+      for (let channel = 0; channel < numChannels; channel++) {
+        sum += audioBuffer.getChannelData(channel)[startSample + i]
+      }
+      monoData[i] = sum / numChannels
+    }
+
+    // Resample to 24000 Hz (TTS model sample rate)
+    const targetSampleRate = 24000
+    const resampleRatio = targetSampleRate / sourceSampleRate
+    const resampledLength = Math.floor(trimmedLength * resampleRatio)
+
+    console.log(`[Trim] Resampling: ${sourceSampleRate}Hz -> ${targetSampleRate}Hz, ratio=${resampleRatio.toFixed(4)}, output samples=${resampledLength}`)
+
+    if (resampledLength <= 0) {
+      await audioContext.close()
+      throw new Error("Resampling resulted in zero samples")
+    }
+
+    const resampledData = new Float32Array(resampledLength)
+
+    // Linear interpolation resampling
+    for (let i = 0; i < resampledLength; i++) {
+      const srcIndex = i / resampleRatio
+      const srcIndexFloor = Math.floor(srcIndex)
+      const srcIndexCeil = Math.min(srcIndexFloor + 1, trimmedLength - 1)
+      const fraction = srcIndex - srcIndexFloor
+      resampledData[i] = monoData[srcIndexFloor] * (1 - fraction) + monoData[srcIndexCeil] * fraction
+    }
+
+    // Validate audio has actual content (not all zeros)
+    let hasContent = false
+    for (let i = 0; i < Math.min(1000, resampledLength); i++) {
+      if (Math.abs(resampledData[i]) > 0.001) {
+        hasContent = true
+        break
+      }
+    }
+    console.log(`[Trim] Audio has content: ${hasContent}`)
+
+    // Convert to WAV blob
+    const wavBlob = floatArrayToWav(resampledData, targetSampleRate)
+    console.log(`[Trim] Output WAV: ${wavBlob.size} bytes, ${(resampledLength / targetSampleRate).toFixed(2)}s`)
+
+    await audioContext.close()
+    return wavBlob
+  }
+
+  // Convert Float32Array (mono) to WAV Blob
+  const floatArrayToWav = (samples: Float32Array, sampleRate: number): Blob => {
+    const numChannels = 1 // Mono
+    const bitDepth = 16
+    const bytesPerSample = bitDepth / 8
+    const blockAlign = numChannels * bytesPerSample
+
+    const dataLength = samples.length * blockAlign
+    const bufferLength = 44 + dataLength
+    const arrayBuffer = new ArrayBuffer(bufferLength)
+    const view = new DataView(arrayBuffer)
+
+    // WAV header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i))
+      }
+    }
+
+    writeString(0, 'RIFF')
+    view.setUint32(4, 36 + dataLength, true)
+    writeString(8, 'WAVE')
+    writeString(12, 'fmt ')
+    view.setUint32(16, 16, true) // fmt chunk size
+    view.setUint16(20, 1, true)  // PCM format
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, sampleRate * blockAlign, true) // byte rate
+    view.setUint16(32, blockAlign, true)
+    view.setUint16(34, bitDepth, true)
+    writeString(36, 'data')
+    view.setUint32(40, dataLength, true)
+
+    // Write audio samples
+    let offset = 44
+    for (let i = 0; i < samples.length; i++) {
+      const sample = Math.max(-1, Math.min(1, samples[i]))
+      const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF
+      view.setInt16(offset, intSample, true)
+      offset += 2
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' })
+  }
+
+  // File upload handlers
+  const handleFileUpload = async (file: File) => {
+    // Validate file type (M4A not supported)
+    if (file.name.match(/\.m4a$/i) || file.type.includes('m4a') || file.type === 'audio/mp4') {
+      alert('M4A format not supported. Please convert to WAV or MP3 first.')
+      return
+    }
+    if (!SUPPORTED_FORMATS.includes(file.type) && !file.name.match(/\.(webm|wav|mp3|ogg|flac)$/i)) {
+      alert('Unsupported format. Please use: WAV, MP3, OGG, FLAC, or WEBM')
+      return
+    }
+
+    // Clear recording when uploading
+    clearRecording()
+    // Clear selected sample
+    setSelectedSampleId(null)
+    setSelectedSampleAudio(null)
+    setSelectedSampleText(null)
+
+    // Check audio duration
+    const audioUrl = URL.createObjectURL(file)
+    const audio = new Audio(audioUrl)
+
+    audio.onloadedmetadata = async () => {
+      const duration = audio.duration
+
+      if (duration > MAX_AUDIO_DURATION) {
+        const confirmTrim = window.confirm(
+          `Audio is ${duration.toFixed(1)} seconds long (max ${MAX_AUDIO_DURATION}s).\n\n` +
+          `The server will automatically trim it to ${TARGET_TRIM_DURATION} seconds ` +
+          `(from both ends equally).\n\nContinue?`
+        )
+
+        if (!confirmTrim) {
+          URL.revokeObjectURL(audioUrl)
+          return
+        }
+
+        // Mark that backend should trim this audio
+        setUploadedNeedsTrim(true)
+        setUploadedFileName(`${file.name} (will be trimmed)`)
+      } else {
+        setUploadedNeedsTrim(false)
+        setUploadedFileName(file.name)
+      }
+
+      // Set the audio URL for preview
+      setUploadedAudioUrl(audioUrl)
+
+      // Convert uploaded file to 24kHz mono WAV (reduces memory, matches backend expectations)
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const audioContext = new AudioContext()
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+
+        // Convert to mono
+        const sourceSampleRate = audioBuffer.sampleRate
+        const monoData = new Float32Array(audioBuffer.length)
+        const numChannels = audioBuffer.numberOfChannels
+        for (let i = 0; i < audioBuffer.length; i++) {
+          let sum = 0
+          for (let channel = 0; channel < numChannels; channel++) {
+            sum += audioBuffer.getChannelData(channel)[i]
+          }
+          monoData[i] = sum / numChannels
+        }
+
+        // Resample to 24kHz
+        const targetSampleRate = 24000
+        const resampleRatio = targetSampleRate / sourceSampleRate
+        const resampledLength = Math.floor(monoData.length * resampleRatio)
+        const resampledData = new Float32Array(resampledLength)
+
+        for (let i = 0; i < resampledLength; i++) {
+          const srcIndex = i / resampleRatio
+          const srcIndexFloor = Math.floor(srcIndex)
+          const srcIndexCeil = Math.min(srcIndexFloor + 1, monoData.length - 1)
+          const fraction = srcIndex - srcIndexFloor
+          resampledData[i] = monoData[srcIndexFloor] * (1 - fraction) + monoData[srcIndexCeil] * fraction
+        }
+
+        // Create WAV blob and convert to base64
+        const wavBlob = floatArrayToWav(resampledData, targetSampleRate)
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string
+          const base64 = dataUrl.split(',')[1]
+          setUploadedAudioBase64(base64)
+        }
+        reader.readAsDataURL(wavBlob)
+
+        await audioContext.close()
+        console.log(`[Upload] Converted ${file.name}: ${sourceSampleRate}Hz → 24kHz, ${numChannels}ch → mono`)
+      } catch (error) {
+        console.error("Error processing uploaded audio:", error)
+        alert("Could not process audio file. Please try another file.")
+        URL.revokeObjectURL(audioUrl)
+        setUploadedAudioUrl(null)
+        setUploadedFileName(null)
+      }
+    }
+
+    audio.onerror = () => {
+      URL.revokeObjectURL(audioUrl)
+      alert("Could not read audio file. Please try another file.")
+    }
+  }
+
+  const clearUpload = () => {
+    if (uploadedAudioUrl) {
+      URL.revokeObjectURL(uploadedAudioUrl)
+    }
+    setUploadedAudioUrl(null)
+    setUploadedAudioBase64(null)
+    setUploadedFileName(null)
+    setUploadedNeedsTrim(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleFileUpload(file)
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileUpload(file)
+    }
+  }
 
   const startRecording = async () => {
+    // Clear uploaded file when starting recording
+    clearUpload()
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
@@ -227,8 +587,76 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
     setSaveName("")
   }
 
+  // Download recording as WAV file (24kHz mono - TTS backend requirement)
+  const downloadRecordingAsWav = async () => {
+    if (!recordedAudioBase64) {
+      alert("No recording to download")
+      return
+    }
+
+    try {
+      // Decode base64 to ArrayBuffer
+      const binaryString = atob(recordedAudioBase64)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+
+      // Decode audio using Web Audio API
+      const audioContext = new AudioContext()
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer)
+
+      // Convert to mono (average all channels)
+      const sourceSampleRate = audioBuffer.sampleRate
+      const monoData = new Float32Array(audioBuffer.length)
+      const numChannels = audioBuffer.numberOfChannels
+      for (let i = 0; i < audioBuffer.length; i++) {
+        let sum = 0
+        for (let channel = 0; channel < numChannels; channel++) {
+          sum += audioBuffer.getChannelData(channel)[i]
+        }
+        monoData[i] = sum / numChannels
+      }
+
+      // Resample to 24kHz (TTS backend requirement)
+      const targetSampleRate = 24000
+      const resampleRatio = targetSampleRate / sourceSampleRate
+      const resampledLength = Math.floor(monoData.length * resampleRatio)
+      const resampledData = new Float32Array(resampledLength)
+
+      // Linear interpolation resampling
+      for (let i = 0; i < resampledLength; i++) {
+        const srcIndex = i / resampleRatio
+        const srcIndexFloor = Math.floor(srcIndex)
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, monoData.length - 1)
+        const fraction = srcIndex - srcIndexFloor
+        resampledData[i] = monoData[srcIndexFloor] * (1 - fraction) + monoData[srcIndexCeil] * fraction
+      }
+
+      // Create WAV blob at 24kHz
+      const wavBlob = floatArrayToWav(resampledData, targetSampleRate)
+
+      // Trigger download
+      const url = URL.createObjectURL(wavBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `voice_recording_${Date.now()}.wav`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      await audioContext.close()
+    } catch (error) {
+      console.error("Error converting to WAV:", error)
+      alert("Failed to convert recording to WAV. Please try again.")
+    }
+  }
+
   const handleGenerate = async () => {
     setIsGenerating(true)
+    // Auto-collapse voice cloning section for better UX
+    setIsVoiceCloningOpen(false)
     const startTime = Date.now()
 
     try {
@@ -246,7 +674,14 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
       if (activeAudioBase64 && activeReferenceText && useVoiceCloning) {
         payload.referenceAudio = activeAudioBase64
         payload.referenceText = activeReferenceText
+
+        // If using uploaded audio that needs trimming, tell backend to trim it
+        if (uploadedAudioBase64 && uploadedNeedsTrim) {
+          payload.trimAudioTo = TARGET_TRIM_DURATION
+        }
       }
+
+      console.log("Sending payload:", { ...payload, referenceAudio: payload.referenceAudio ? "[base64 data]" : undefined })
 
       const response = await fetch("/api/generate-speech", {
         method: "POST",
@@ -255,12 +690,25 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
       })
 
       const data = await response.json()
+      console.log("Response:", { success: data.success, hasAudioUrl: !!data.audioUrl, error: data.error })
+
+      if (!response.ok || !data.success) {
+        alert(`Generation failed: ${data.error || "Unknown error"}`)
+        return
+      }
+
+      if (!data.audioUrl) {
+        alert("No audio returned from server")
+        return
+      }
+
       const endTime = Date.now()
       const duration = (endTime - startTime) / 1000
 
       onGenerate(data.audioUrl, duration)
     } catch (error) {
       console.error("Error generating speech:", error)
+      alert(`Error: ${error instanceof Error ? error.message : "Failed to generate speech"}`)
     } finally {
       setIsGenerating(false)
     }
@@ -372,7 +820,8 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
           </div>
           <div className="flex items-center gap-2">
             {recordedAudioBase64 && <span className="text-xs text-green-500 font-medium">● New recording</span>}
-            {selectedSampleId && !recordedAudioBase64 && <span className="text-xs text-blue-500 font-medium">● Saved sample</span>}
+            {uploadedAudioBase64 && !recordedAudioBase64 && <span className="text-xs text-purple-500 font-medium">● Uploaded file</span>}
+            {selectedSampleId && !recordedAudioBase64 && !uploadedAudioBase64 && <span className="text-xs text-blue-500 font-medium">● Saved sample</span>}
             <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isVoiceCloningOpen ? "rotate-180" : ""}`} />
           </div>
         </CollapsibleTrigger>
@@ -410,14 +859,24 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
               )}
 
               {recordedAudioUrl && !isRecording && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearRecording}
-                  title="Clear recording"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={downloadRecordingAsWav}
+                    title="Download as WAV"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={clearRecording}
+                    title="Clear recording"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
 
@@ -426,6 +885,86 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
               <div className="flex items-center gap-2 text-red-500">
                 <span className="animate-pulse">●</span>
                 <span className="text-sm">Recording... Read the text above clearly.</span>
+              </div>
+            )}
+
+            {/* OR divider */}
+            {!isRecording && !recordedAudioUrl && !uploadedAudioUrl && (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-border" />
+                <span className="text-xs text-muted-foreground">OR</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
+            )}
+
+            {/* File Upload Area */}
+            {!isRecording && !recordedAudioUrl && (
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer ${
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : uploadedAudioUrl
+                    ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                    : "border-border hover:border-primary/50"
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".webm,.wav,.mp3,.ogg,.flac,.m4a,audio/*"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                />
+
+                {uploadedAudioUrl ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileAudio className="h-8 w-8 text-green-500" />
+                      <div>
+                        <p className="text-sm font-medium">{uploadedFileName}</p>
+                        <p className="text-xs text-muted-foreground">Click to change file</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        clearUpload()
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Upload className={`h-8 w-8 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">
+                        {isDragging ? "Drop audio file here" : "Upload audio file"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Drag & drop or click to browse
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        webm, wav, mp3, ogg, flac, m4a
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Uploaded Audio Preview */}
+            {uploadedAudioUrl && !recordedAudioUrl && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Preview uploaded audio:</p>
+                <audio controls src={uploadedAudioUrl} className="w-full h-10" />
               </div>
             )}
 
@@ -523,15 +1062,18 @@ export default function TextToSynthesizeTab({ onGenerate, isGenerating, setIsGen
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Voice cloning toggle - shows when recording or saved sample exists */}
-      {(recordedAudioBase64 || selectedSampleAudio) && (
+      {/* Voice cloning toggle - shows when recording, uploaded file, or saved sample exists */}
+      {(recordedAudioBase64 || uploadedAudioBase64 || selectedSampleAudio) && (
         <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">
               Use cloned voice
               {recordedAudioBase64 && <span className="text-xs text-muted-foreground ml-1">(new recording)</span>}
-              {selectedSampleId && !recordedAudioBase64 && (
+              {uploadedAudioBase64 && !recordedAudioBase64 && (
+                <span className="text-xs text-muted-foreground ml-1">({uploadedFileName})</span>
+              )}
+              {selectedSampleId && !recordedAudioBase64 && !uploadedAudioBase64 && (
                 <span className="text-xs text-muted-foreground ml-1">
                   ({savedSamples.find(s => s.id === selectedSampleId)?.name || `Voice ${selectedSampleId}`})
                 </span>

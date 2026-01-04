@@ -9,7 +9,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.redis_client import RedisClient
+from shared.auth import APIKeyManager, APIKeyInfo, is_localhost_request
 from shared.schemas import (
     TTSRequest,
     TTSAsyncResponse,
@@ -45,6 +46,7 @@ MAX_DEFAULT_SAMPLES = 3  # Max unnamed samples to keep
 # Global state
 class AppState:
     redis: Optional[RedisClient] = None
+    key_manager: Optional[APIKeyManager] = None
 
 
 state = AppState()
@@ -58,6 +60,11 @@ async def lifespan(app: FastAPI):
     if not state.redis.ping():
         raise RuntimeError("Cannot connect to Redis")
     print(f"Connected to Redis: {REDIS_URL}")
+
+    # Initialize API key manager
+    state.key_manager = APIKeyManager(state.redis)
+    print("API key authentication enabled (localhost bypass active)")
+
     yield
     # Shutdown
     if state.redis:
@@ -81,12 +88,48 @@ app.add_middleware(
 )
 
 
+from fastapi import Header, Query, Request
+
+
+async def verify_api_key(
+    request: Request,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    api_key: Optional[str] = Query(None),
+) -> Optional[APIKeyInfo]:
+    """Verify API key - bypasses for localhost requests."""
+    # Bypass for localhost
+    if is_localhost_request(request):
+        return None
+
+    # Get key from header or query param
+    key = x_api_key or api_key
+    if not key:
+        raise HTTPException(
+            status_code=401,
+            detail="API key required. Provide via X-API-Key header or api_key query parameter.",
+        )
+
+    # Validate key
+    key_info = state.key_manager.validate_key(key)
+    if not key_info:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key.",
+        )
+
+    return key_info
+
+
 @app.post("/synthesize", response_class=Response)
-async def synthesize(req: TTSRequest):
+async def synthesize(
+    req: TTSRequest,
+    api_key_info: Optional[APIKeyInfo] = Depends(verify_api_key),
+):
     """
     Synthesize speech from text (synchronous).
 
     Waits for result and returns WAV audio directly.
+    Requires API key for external requests (localhost bypassed).
     """
     job_id = str(uuid.uuid4())
 
@@ -101,6 +144,7 @@ async def synthesize(req: TTSRequest):
         quality=req.quality,
         reference_audio=req.reference_audio,
         reference_text=req.reference_text,
+        trim_audio_to=req.trim_audio_to,
         timeout=JOB_TIMEOUT,
     )
 
@@ -125,6 +169,11 @@ async def synthesize(req: TTSRequest):
     import base64
     audio_bytes = base64.b64decode(result["audio"])
 
+    # Track usage for API key users
+    if api_key_info:
+        audio_duration = result.get("audio_duration", 0.0)
+        state.key_manager.increment_usage(api_key_info.key_id, audio_duration)
+
     return Response(
         content=audio_bytes,
         media_type="audio/wav",
@@ -138,11 +187,15 @@ async def synthesize(req: TTSRequest):
 
 
 @app.post("/synthesize/async", response_model=TTSAsyncResponse)
-async def synthesize_async(req: TTSRequest):
+async def synthesize_async(
+    req: TTSRequest,
+    api_key_info: Optional[APIKeyInfo] = Depends(verify_api_key),
+):
     """
     Submit synthesis job (asynchronous).
 
     Returns job_id immediately. Poll /job/{job_id} for result.
+    Requires API key for external requests (localhost bypassed).
     """
     job_id = str(uuid.uuid4())
 
@@ -157,6 +210,7 @@ async def synthesize_async(req: TTSRequest):
         quality=req.quality,
         reference_audio=req.reference_audio,
         reference_text=req.reference_text,
+        trim_audio_to=req.trim_audio_to,
         timeout=JOB_TIMEOUT,
     )
 
@@ -171,6 +225,10 @@ async def synthesize_async(req: TTSRequest):
     else:
         estimated_wait = None
 
+    # Track usage for API key users (request count only, audio tracked on download)
+    if api_key_info:
+        state.key_manager.increment_usage(api_key_info.key_id, audio_seconds=0.0)
+
     return TTSAsyncResponse(
         job_id=job_id,
         status=JobStatus.PENDING,
@@ -180,8 +238,11 @@ async def synthesize_async(req: TTSRequest):
 
 
 @app.get("/job/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(job_id: str):
-    """Get job status and result."""
+async def get_job_status(
+    job_id: str,
+    api_key_info: Optional[APIKeyInfo] = Depends(verify_api_key),
+):
+    """Get job status and result. Requires API key for external requests."""
     status = state.redis.get_job_status(job_id)
     if status is None:
         raise HTTPException(404, "Job not found")
@@ -205,8 +266,11 @@ async def get_job_status(job_id: str):
 
 
 @app.get("/job/{job_id}/audio", response_class=Response)
-async def get_job_audio(job_id: str):
-    """Download audio for completed job."""
+async def get_job_audio(
+    job_id: str,
+    api_key_info: Optional[APIKeyInfo] = Depends(verify_api_key),
+):
+    """Download audio for completed job. Requires API key for external requests."""
     result = state.redis.get_result(job_id)
     if result is None:
         raise HTTPException(404, "Job not found or expired")

@@ -38,7 +38,7 @@ Allow users to save current recording to server for reuse. No need to re-record 
 
 ## VC-002: Voice Cloning - File Upload Support
 **Priority:** P1
-**Status:** Ready
+**Status:** Done
 
 ### Description
 Voice cloning should support uploading existing audio files. Users can browse and select local files as reference audio.
@@ -67,7 +67,7 @@ UI must support both selection methods - dropdown to choose input method (record
 
 ## UI-001: Audio Waveform Visualization
 **Priority:** P1
-**Status:** Ready
+**Status:** Done
 
 ### Description
 Current audio visualization uses random sizes and looks messy. Find and integrate a proper library to display the actual audio waveform.
@@ -209,7 +209,7 @@ Frontend calls backend via **local address** (localhost:17603), NOT the public b
 
 ## API-001: API Key Support
 **Priority:** P1
-**Status:** Ready
+**Status:** Done
 
 ### Description
 Support API keys so friends can use the TTS service via API.

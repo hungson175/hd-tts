@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 VietVoice-TTS is a Vietnamese Text-to-Speech system with three main components:
 - **Core Library** (`vietvoicetts/`): Python library using ONNX Runtime with flow-matching diffusion models
 - **Backend** (`backend/`): FastAPI gateway + Redis queue + GPU workers for scalable inference
-- **Frontend** (`frontend/`): Next.js 16 web interface
+- **Frontend** (`frontend/`): Next.js 16 web interface (**USE WEBPACK, NOT TURBOPACK**)
 
 ## Architecture
 
@@ -65,6 +65,24 @@ pnpm install
 pnpm dev             # Runs on port 3341
 pnpm build
 pnpm lint
+```
+
+## CRITICAL: Use Webpack, NOT Turbopack
+
+**Turbopack causes 500 errors on static chunks.** Always use Webpack:
+
+```js
+// next.config.js - DO NOT use experimental.turbo
+module.exports = {
+  // NO turbo/turbopack settings
+}
+```
+
+**After ANY frontend change:**
+```bash
+rm -rf .next
+pnpm build
+# Verify no 500 errors before restarting
 ```
 
 ## Key Configuration

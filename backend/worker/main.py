@@ -143,7 +143,20 @@ class TTSWorker:
                     return audio_segment[start_trim:duration - end_trim]
 
                 audio = trim_silence(audio)
-                logger.info(f"Trimmed audio duration: {len(audio)}ms")
+                logger.info(f"After silence trim: {len(audio)}ms")
+
+                # Trim to target duration if requested
+                trim_audio_to = job.get("trim_audio_to")
+                if trim_audio_to:
+                    target_ms = int(trim_audio_to * 1000)
+                    current_ms = len(audio)
+                    if current_ms > target_ms:
+                        # Trim from both ends equally
+                        trim_per_side = (current_ms - target_ms) // 2
+                        audio = audio[trim_per_side:current_ms - trim_per_side]
+                        logger.info(f"Trimmed to target duration: {len(audio)}ms (target was {target_ms}ms)")
+
+                logger.info(f"Final reference audio duration: {len(audio)}ms")
 
                 # Export as WAV to temp file
                 with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:

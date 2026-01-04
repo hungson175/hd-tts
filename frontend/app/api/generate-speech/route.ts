@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.TTS_BACKEND_URL || "http://localhost:17603"
 
 export async function POST(request: Request) {
   try {
-    const { text, gender, accent, emotion, quality, speed, referenceAudio, referenceText } = await request.json()
+    const { text, gender, accent, emotion, quality, speed, referenceAudio, referenceText, trimAudioTo } = await request.json()
 
     // Map frontend params to backend schema
     // Backend uses "area" instead of "accent"
@@ -30,6 +30,11 @@ export async function POST(request: Request) {
     if (referenceAudio && referenceText) {
       backendPayload.reference_audio = referenceAudio  // base64 encoded
       backendPayload.reference_text = referenceText
+
+      // If trim duration specified, tell backend to trim the audio
+      if (trimAudioTo && typeof trimAudioTo === 'number') {
+        backendPayload.trim_audio_to = trimAudioTo
+      }
     }
 
     // Call FastAPI backend
