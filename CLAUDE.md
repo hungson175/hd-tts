@@ -139,16 +139,53 @@ quality: "high" | "fast"  # High=NFE32, Fast=NFE16
 
 5. **Voice cloning**: Requires both `reference_audio` (file path) and `reference_text` (transcript)
 
+## API Key Authentication
+
+External API requests require an API key. Localhost requests (frontend) bypass auth automatically.
+
+### Test API Key
+
+| Name | Key ID | Full Key |
+|------|--------|----------|
+| Test User | `8e1ec4a2` | `vvtts_7e1647c466a68a36cfa401a08e1ec4a2` |
+
+### Usage
+
+```bash
+# Via header
+curl -X POST https://hd-tts-backend.hungson175.com/synthesize \
+  -H "X-API-Key: vvtts_7e1647c466a68a36cfa401a08e1ec4a2" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Xin chào", "gender": "female", "area": "northern"}' \
+  --output audio.wav
+
+# Via query param
+curl "https://hd-tts-backend.hungson175.com/health?api_key=vvtts_7e1647c466a68a36cfa401a08e1ec4a2"
+```
+
+### Managing Keys
+
+```bash
+cd backend
+source ../venv/bin/activate
+python manage_keys.py create "Friend Name"   # Create new key
+python manage_keys.py list                    # List all keys + usage
+python manage_keys.py info <key_id>           # Show key details
+python manage_keys.py delete <key_id>         # Revoke key
+```
+
 ## API Endpoints (Backend)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/synthesize` | Sync TTS, returns WAV binary |
-| POST | `/synthesize/async` | Async TTS, returns job_id |
-| GET | `/job/{job_id}` | Poll job status |
-| GET | `/job/{job_id}/audio` | Download completed audio |
-| GET | `/health` | Health check with worker status |
-| GET | `/voices` | List available voice options |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/synthesize` | Required* | Sync TTS, returns WAV binary |
+| POST | `/synthesize/async` | Required* | Async TTS, returns job_id |
+| GET | `/job/{job_id}` | Required* | Poll job status |
+| GET | `/job/{job_id}/audio` | Required* | Download completed audio |
+| GET | `/health` | No | Health check with worker status |
+| GET | `/voices` | No | List available voice options |
+
+*Localhost requests bypass auth
 
 ## File Structure (Key Files)
 

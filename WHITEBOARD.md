@@ -1,49 +1,35 @@
 # WHITEBOARD - Current Sprint
 
-## Team Status (Updated: 03:38)
+## Team Status (Updated: 03:45)
 
 | Role | Current Task | Status | Notes |
 |------|--------------|--------|-------|
-| **FS** | UI-001 | DONE | Waveform visualization. Ready for review |
-| **DEV** | - | Idle | Fixed hydration error proactively |
-| **PO** | Coordination | - | Managing sprints |
+| **FS** | - | Idle | All tasks done, committed |
+| **DEV** | - | Idle | All tasks done, committed |
+| **PO** | - | Idle | Sprint complete |
 
 ---
 
-## Active Tasks
+## Session Summary (Jan 5, 2026)
 
-### FS: UI-002 + UI-006 (Frontend Sprint)
+### Completed This Session:
+1. **UI-002**: Download button (MP3 format, 128kbps)
+2. **UI-006**: Removed redundant "Generated Audio" tab
+3. **UI-001**: Waveform visualization (wavesurfer.js)
+4. **TECH-001**: Backend test coverage (59 tests, 80% coverage)
+5. **Voice persistence**: Selected voice remembered across sessions
+6. **Auto-collapse**: Voice cloning section collapses on generate
+7. **Audio widget**: Moved below main content
+8. **Hydration fix**: SSR/client mismatch resolved
+9. **Cloudflare**: Tunnel restarted, both domains working
 
-**UI-002: Download and Share Buttons**
-- Add download button to audio widget → downloads WAV file
-- Add share button → copy link or native share API
+### Commit:
+- **33308a6**: feat: Add voice cloning, MP3 download, waveform visualization
+- 20 files changed, 2378 insertions(+), 244 deletions(-)
 
-**UI-006: Remove Redundant Tab**
-- Remove "Generated Audio" tab entirely
-- Keep right-side audio widget functional
-
-**Deliverables:**
-- [ ] Download button works
-- [ ] Share button works (copy link)
-- [ ] "Generated Audio" tab removed
-- [ ] Build passes (Webpack, not Turbopack!)
-
----
-
-### DEV: TECH-001 - Backend Test Coverage
-
-**Goal:** Add automated tests for backend gateway and worker.
-
-**Scope:**
-- Test `/synthesize` endpoint (mock TTS)
-- Test `/health` endpoint
-- Test job queue operations
-- Test API key auth (already has tests, extend if needed)
-
-**Deliverables:**
-- [ ] pytest tests in `backend/tests/`
-- [ ] 80%+ coverage on gateway
-- [ ] All tests pass
+### Live URLs:
+- Frontend: https://hd-tts.hungson175.com ✓
+- Backend: https://hd-tts-backend.hungson175.com ✓
 
 ---
 
