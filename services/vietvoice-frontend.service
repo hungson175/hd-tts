@@ -1,0 +1,17 @@
+[Unit]
+Description=VietVoice TTS Frontend (Next.js)
+After=network.target vietvoice-gateway.service
+
+[Service]
+Type=simple
+User=hungson175
+WorkingDirectory=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/frontend
+Environment="PATH=/home/hungson175/.nvm/versions/node/v22.17.1/bin:/usr/bin:/bin"
+Environment="PORT=3341"
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/pnpm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

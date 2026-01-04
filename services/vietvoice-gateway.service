@@ -1,0 +1,18 @@
+[Unit]
+Description=VietVoice TTS API Gateway
+After=network.target vietvoice-redis.service
+Requires=vietvoice-redis.service
+
+[Service]
+Type=simple
+User=hungson175
+WorkingDirectory=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/backend
+Environment="PATH=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/venv/bin:/usr/bin:/bin"
+Environment="REDIS_URL=redis://localhost:6379/0"
+Environment="API_PORT=17603"
+ExecStart=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/venv/bin/python gateway/main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

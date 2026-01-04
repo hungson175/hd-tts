@@ -1,0 +1,13 @@
+[Unit]
+Description=Redis for VietVoice TTS (via Docker)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/docker start mhub2-redis-dev
+ExecStop=/usr/bin/docker stop mhub2-redis-dev
+
+[Install]
+WantedBy=multi-user.target

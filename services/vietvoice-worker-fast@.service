@@ -1,0 +1,19 @@
+[Unit]
+Description=VietVoice TTS Fast Worker %i
+After=network.target vietvoice-gateway.service
+Requires=vietvoice-gateway.service
+
+[Service]
+Type=simple
+User=hungson175
+WorkingDirectory=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/backend
+Environment="PATH=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/venv/bin:/usr/bin:/bin"
+Environment="REDIS_URL=redis://localhost:6379/0"
+Environment="WORKER_ID=worker-fast-%i"
+Environment="QUALITY=fast"
+ExecStart=/home/hungson175/dev/ultimate-boss-HD/VietVoice-TTS/venv/bin/python worker/main.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
