@@ -51,54 +51,60 @@ def generate_speech(text, quality="high"):
 def main():
     print("=== TTS Time-Per-Word Calibration ===\n")
 
-    total_time = 0
-    total_words = 0
-    all_results = []
+    # Calibrate both quality modes
+    for quality_mode in ["high", "fast"]:
+        print(f"\n{'='*50}")
+        print(f"CALIBRATING: {quality_mode.upper()} QUALITY")
+        print(f"{'='*50}\n")
 
-    for i, sample in enumerate(SAMPLES, 1):
-        word_count = count_words(sample)
-        print(f"\nSample {i}: {word_count} words")
-        print(f"Text: {sample[:60]}...")
+        total_time = 0
+        total_words = 0
+        all_results = []
 
-        # Run 2 generations per sample
-        for run in range(1, 3):
-            print(f"  Run {run}...", end=" ", flush=True)
-            duration, success = generate_speech(sample, quality="high")
+        for i, sample in enumerate(SAMPLES, 1):
+            word_count = count_words(sample)
+            print(f"\nSample {i}: {word_count} words")
+            print(f"Text: {sample[:60]}...")
 
-            if success:
-                print(f"✓ {duration:.2f}s")
-                total_time += duration
-                total_words += word_count
-                all_results.append({
-                    "sample": i,
-                    "run": run,
-                    "words": word_count,
-                    "time": duration,
-                    "time_per_word": duration / word_count
-                })
-            else:
-                print("✗ FAILED")
+            # Run 2 generations per sample
+            for run in range(1, 3):
+                print(f"  Run {run}...", end=" ", flush=True)
+                duration, success = generate_speech(sample, quality=quality_mode)
 
-    # Calculate overall average
-    if total_words > 0:
-        avg_time_per_word = total_time / total_words
+                if success:
+                    print(f"✓ {duration:.2f}s")
+                    total_time += duration
+                    total_words += word_count
+                    all_results.append({
+                        "sample": i,
+                        "run": run,
+                        "words": word_count,
+                        "time": duration,
+                        "time_per_word": duration / word_count
+                    })
+                else:
+                    print("✗ FAILED")
 
-        print("\n" + "="*50)
-        print("CALIBRATION RESULTS")
-        print("="*50)
-        print(f"Total generations: {len(all_results)}")
-        print(f"Total time: {total_time:.2f}s")
-        print(f"Total words: {total_words}")
-        print(f"\n>>> AVERAGE TIME PER WORD: {avg_time_per_word:.4f}s <<<")
-        print("="*50)
+        # Calculate overall average for this quality mode
+        if total_words > 0:
+            avg_time_per_word = total_time / total_words
 
-        print("\nDetailed results:")
-        for r in all_results:
-            print(f"  Sample {r['sample']}, Run {r['run']}: {r['words']} words, {r['time']:.2f}s, {r['time_per_word']:.4f}s/word")
+            print("\n" + "="*50)
+            print(f"CALIBRATION RESULTS - {quality_mode.upper()} QUALITY")
+            print("="*50)
+            print(f"Total generations: {len(all_results)}")
+            print(f"Total time: {total_time:.2f}s")
+            print(f"Total words: {total_words}")
+            print(f"\n>>> AVERAGE TIME PER WORD ({quality_mode.upper()}): {avg_time_per_word:.4f}s <<<")
+            print("="*50)
 
-        print(f"\nUpdate TIME_PER_WORD constant to: {avg_time_per_word:.4f}")
-    else:
-        print("\n✗ No successful generations. Check if backend is running.")
+            print("\nDetailed results:")
+            for r in all_results:
+                print(f"  Sample {r['sample']}, Run {r['run']}: {r['words']} words, {r['time']:.2f}s, {r['time_per_word']:.4f}s/word")
+
+            print(f"\nUpdate TIME_PER_WORD_{quality_mode.upper()} constant to: {avg_time_per_word:.4f}")
+        else:
+            print(f"\n✗ No successful generations for {quality_mode} mode. Check if backend is running.")
 
 if __name__ == "__main__":
     main()

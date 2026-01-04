@@ -12,11 +12,12 @@
 
 ## Recently Completed
 
-**UI-003: Linear Progress Bar** (commit 9b76b32)
+**UI-003: Linear Progress Bar** (commits 9b76b32, de61df6)
 - ✓ Horizontal bar below Generate button
 - ✓ Green fill from bottom to top
-- ✓ Time estimation (0.15s/word calibrated)
+- ✓ Time estimation calibrated with real data (0.1132s/word)
 - ✓ Smooth animation, caps at 95%
+- ✓ Calibration script for future adjustments
 
 **UI-007: Persistent Input Text** (commit dfa48ea)
 - ✓ localStorage persistence implemented

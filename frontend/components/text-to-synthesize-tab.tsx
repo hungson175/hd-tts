@@ -18,9 +18,11 @@ const VOICE_CLONING_TEXT = "Tiếp nữa, chúng ta sẽ điểm qua một số 
 
 // Time estimation calibration (seconds per word)
 // Calibrated from 6 actual generation tests (3 samples × 2 runs each)
-// Test results: 272 total words, 30.80s total time
-// Samples: Vietnamese text 43-49 words, high quality mode
-const TIME_PER_WORD = 0.1132
+// Backend TTS: 0.0926s/word (measured directly)
+// BUT: UI includes MP3 conversion overhead (~2.5x total time)
+// Boss's test: 49 words took 13s total (backend was 5s, conversion added 8s)
+// Therefore: Use 0.27s/word for total UI experience (includes conversion)
+const TIME_PER_WORD = 0.27
 
 interface VoiceSample {
   id: string
